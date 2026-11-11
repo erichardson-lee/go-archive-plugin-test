@@ -36,10 +36,12 @@ The rough test plan is as follows (written before implementation, so TDD I guess
 
 Below are the results of various rounds of testing, I've included the commit 
 hash for the version of code that I ran to get a specific output 
+(Each result below is the output of `make bench` except where stated otherwise)
 
 1. (`8a78afc2967566526ae23146f39b140d68555c45`)
   Using `io.ReadAll` on the tar file's files
-  Turns out this was using ~2.2GB of RAM, as io.ReadAll is using a temporary buffer
+  Turns out this was using ~2.2GB of RAM, as io.ReadAll is using a temporary
+  buffer (doubling memory usage)
 ```
 go test -run='^$' -bench=. -benchmem ./...
 goos: linux
@@ -75,3 +77,73 @@ ok      example.com/archive-fs-test     3.772s
   - seperate the tests into their own files (`zip.go` `tar.go` etc.)
   - Add a V1 Prefix
   - to make it so make bench runs 10 iterations
+```
+go test -run='^$' -bench='.' -benchtime=10x -benchmem ./...
+goos: linux
+goarch: amd64
+pkg: example.com/archive-fs-test
+cpu: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
+BenchmarkTar/V1-8             10         190695317 ns/op        1078656828 B/op       54 allocs/op
+BenchmarkTarGz/V1-8                   10         725309938 ns/op        1079088188 B/op     4292 allocs/op
+BenchmarkZip/V1-8                     10          22352958 ns/op         5321957 B/op       3748 allocs/op
+PASS
+ok      example.com/archive-fs-test     9.479s
+```
+
+4. I had an idea while grabbing a bite to eat, if we just search the tar for a
+   target file and skip the rest, we can save on loading anything into memory
+   other than the target file.
+   This does come at the cost of requiring a new file open per read, however.
+   (also at this point, I renamed the tar.gz test to TGZ as the alignment was
+   annoying)
+
+   Anyway, that made 
+```
+go test -run='^$' -bench='.' -benchtime=10x -benchmem ./...
+goos: linux
+goarch: amd64
+pkg: example.com/archive-fs-test
+cpu: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
+BenchmarkTar/V1-8                     10         267320647 ns/op        1078659004 B/op       55 allocs/op
+BenchmarkTar/V2-8                     10            798046 ns/op         4915784 B/op         80 allocs/op
+BenchmarkTGz/V1-8                     10         768202258 ns/op        1079088184 B/op     4292 allocs/op
+BenchmarkTGz/V2-8                     10         588651060 ns/op         5773452 B/op       8555 allocs/op
+BenchmarkZip/V1-8                     10          22109717 ns/op         5321936 B/op       3748 allocs/op
+PASS
+ok      example.com/archive-fs-test     16.479s
+```
+
+5. To make things fair, I also added a V2 of the ZIP implementation that tires
+   pre-allocating memory instead of using `io.readFull`
+   This has no meaningfull difference
+```
+go test -run='^$' -bench='.' -benchtime=10x -benchmem ./...
+goos: linux
+goarch: amd64
+pkg: example.com/archive-fs-test
+cpu: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
+BenchmarkTar/V1-8                     10         468493807 ns/op        1078656817 B/op       54 allocs/op
+BenchmarkTar/V2-8                     10            642817 ns/op         4914119 B/op         80 allocs/op
+BenchmarkTGz/V1-8                     10         756886218 ns/op        1079089005 B/op     4292 allocs/op
+BenchmarkTGz/V2-8                     10         596504599 ns/op         5772641 B/op       8555 allocs/op
+BenchmarkZip/V1-8                     10          25153705 ns/op         5321920 B/op       3748 allocs/op
+BenchmarkZip/V2-8                     10          24032298 ns/op         5406277 B/op       3751 allocs/op
+PASS
+ok      example.com/archive-fs-test     18.730s
+```
+
+6. Finally, to get some decent data for later comparisons, I ran
+  `make bench BENCH=/V2 BENCHTIME=50x` to run 50 iterations of only the V2
+  implementations
+```
+go test -run='^$' -bench='/V2' -benchtime=50x -benchmem ./...
+goos: linux
+goarch: amd64
+pkg: example.com/archive-fs-test
+cpu: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
+BenchmarkTar/V2-8                     50            778928 ns/op         4913254 B/op         79 allocs/op
+BenchmarkTGz/V2-8                     50         547552835 ns/op         5771328 B/op       8555 allocs/op
+BenchmarkZip/V2-8                     50          22662637 ns/op         5406278 B/op       3752 allocs/op
+PASS
+ok      example.com/archive-fs-test     28.554s
+```

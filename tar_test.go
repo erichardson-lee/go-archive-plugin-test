@@ -4,6 +4,7 @@ import "testing"
 
 var tarImpls = []impl{
 	{"V1", TarProcessorV1},
+	{"V2", TarProcessorV2},
 }
 
 func TestTar(t *testing.T) { testImpls(t, "plugin.tar", tarImpls) }
