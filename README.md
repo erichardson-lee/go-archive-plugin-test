@@ -22,7 +22,8 @@ The rough test plan is as follows (written before implementation, so TDD I guess
   ```
 3. Make a small go function that tries to do the folowing on each archive type:
   - Open the archive
-  - Read the contents of `plugin.yaml` and parse as a string
+  - ~~Read the contents of `plugin.yaml` and parse as a string~~
+  - Read the contents of `plugin.yaml` and return it as a `[]byte`
   - Read the contents of `plugin.wasm` and store in full as a `[]byte`
   - Close the archive
   - Return the `plugin.yaml` as a `string`, and `plugin.wasm` as a `[]byte`
