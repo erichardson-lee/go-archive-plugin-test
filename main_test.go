@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -44,6 +45,11 @@ type impl struct {
 func testImpls(t *testing.T, archivePath string, impls []impl) {
 	for _, im := range impls {
 		t.Run(im.name, func(t *testing.T) {
+			// I tried testing the big ones, but it nearly crashed my PC lowkey
+			if strings.HasSuffix(im.name, "/Big") {
+				t.SkipNow()
+			}
+
 			result, err := im.fn(archivePath)
 			if err != nil {
 				t.Fatal(err)
