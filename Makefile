@@ -1,4 +1,8 @@
-.PHONY: test bench clean
+.PHONY: test bench bench-raw clean
+
+# bash + pipefail so a failing `go test` still fails `make bench`.
+SHELL := /bin/bash
+.SHELLFLAGS := -o pipefail -c
 
 ARCHIVES := plugin.zip plugin.tar plugin.tar.gz
 
@@ -11,8 +15,15 @@ BENCH ?= .
 test: $(ARCHIVES)
 	go test -v ./...
 
+BENCH_CMD = go test -run='^$$' -bench='$(BENCH)' -benchtime=$(BENCHTIME) -benchmem ./...
+
+# Results as a markdown table (see 3.format-bench.sh).
 bench: $(ARCHIVES)
-	go test -run='^$$' -bench='$(BENCH)' -benchtime=$(BENCHTIME) -benchmem ./...
+	$(BENCH_CMD) | ./3.format-bench.sh
+
+# Unformatted `go test` output, e.g. to see failure details.
+bench-raw: $(ARCHIVES)
+	$(BENCH_CMD)
 
 # Only built if missing (no timestamp-based rebuilds).
 plugin/big.file:
