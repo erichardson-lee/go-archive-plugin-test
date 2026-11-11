@@ -138,9 +138,9 @@ func getTarFS(tarFile io.Reader) (TarMemFs, error) {
 		}
 
 		fileName := filepath.Clean(header.Name)
-		fileData, err := io.ReadAll(tarReader)
+		fileData := make([]byte, header.Size)
 
-		if err != nil {
+		if _, err := io.ReadFull(tarReader, fileData); err != nil {
 			return nil, fmt.Errorf("error reading file %v: %w", fileName, err)
 		}
 

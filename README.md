@@ -31,3 +31,22 @@ The rough test plan is as follows (written before implementation, so TDD I guess
 5. Add go benchmarks that'll measure speed, CPU usage, and Memory usage
 6. Add results to this document
 7. Profit?
+
+# Results
+
+
+1. (`8a78afc2967566526ae23146f39b140d68555c45`)
+  Using `io.ReadAll` on the tar file's files
+  Turns out this was using ~2.2GB of RAM, as io.ReadAll is using a temporary buffer
+```
+go test -run='^$' -bench=. -benchmem ./...
+goos: linux
+goarch: amd64
+pkg: example.com/archive-fs-test
+cpu: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
+BenchmarkZip-8                51          21952518 ns/op         5318240 B/op       3741 allocs/op
+BenchmarkTar-8                 1        1355336519 ns/op        2202710896 B/op      129 allocs/op
+BenchmarkTarGz-8               1        1330816974 ns/op        2762209160 B/op     4371 allocs/op
+PASS
+ok      example.com/archive-fs-test     3.946s
+```
