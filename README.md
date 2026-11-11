@@ -34,6 +34,8 @@ The rough test plan is as follows (written before implementation, so TDD I guess
 
 # Results
 
+Below are the results of various rounds of testing, I've included the commit 
+hash for the version of code that I ran to get a specific output 
 
 1. (`8a78afc2967566526ae23146f39b140d68555c45`)
   Using `io.ReadAll` on the tar file's files
@@ -50,3 +52,26 @@ BenchmarkTarGz-8               1        1330816974 ns/op        2762209160 B/op 
 PASS
 ok      example.com/archive-fs-test     3.946s
 ```
+
+2. (`06a161d6928f11d59d5f564c8d08c3e3f6545f3e`)
+  Using `io.Readfull` and pre-allocating the buffer based on the tar header
+  Tar is now ~2.3x quicker, and uses half as much RAM
+  Tar.gz is ~1.9x quicker, so less of an improvement but still better
+
+```
+go test -run='^$' -bench=. -benchmem ./...
+goos: linux
+goarch: amd64
+pkg: example.com/archive-fs-test
+cpu: 11th Gen Intel(R) Core(TM) i7-1185G7 @ 3.00GHz
+BenchmarkZip-8                50          22844869 ns/op         5318262 B/op       3741 allocs/op
+BenchmarkTar-8                 2         572265646 ns/op        1078661668 B/op       56 allocs/op
+BenchmarkTarGz-8               2         686186814 ns/op        1079088692 B/op     4294 allocs/op
+PASS
+ok      example.com/archive-fs-test     3.772s
+```
+
+3. Not really a run; but at this point I (got claude to)
+  - seperate the tests into their own files (`zip.go` `tar.go` etc.)
+  - Add a V1 Prefix
+  - to make it so make bench runs 10 iterations

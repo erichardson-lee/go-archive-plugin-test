@@ -34,62 +34,35 @@ func checkData(t *testing.T, actual *PluginData) {
 	}
 }
 
-func TestZip(t *testing.T) {
-	result, err := ZipProcessor("plugin.zip")
-	if err != nil {
-		t.FailNow()
-	}
-
-	checkData(t, result)
+// impl is a named ArchiveProcessor version. Tests and benchmarks run each one
+// as a sub-test, e.g. BenchmarkZip/V1, BenchmarkZip/V2.
+type impl struct {
+	name string
+	fn   ArchiveProcessor
 }
 
-func BenchmarkZip(b *testing.B) {
-	for b.Loop() {
-		_, err := ZipProcessor("plugin.zip")
+func testImpls(t *testing.T, archivePath string, impls []impl) {
+	for _, im := range impls {
+		t.Run(im.name, func(t *testing.T) {
+			result, err := im.fn(archivePath)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		if err != nil {
-			// Should never error
-			b.FailNow()
-		}
-	}
-}
-
-func TestTar(t *testing.T) {
-	result, err := TarProcessor("plugin.tar")
-	if err != nil {
-		t.FailNow()
-	}
-
-	checkData(t, result)
-}
-
-func BenchmarkTar(b *testing.B) {
-	for b.Loop() {
-		_, err := TarProcessor("plugin.tar")
-
-		if err != nil {
-			// Should never error
-			b.FailNow()
-		}
+			checkData(t, result)
+		})
 	}
 }
 
-func TestTarGz(t *testing.T) {
-	result, err := TarGzProcessor("plugin.tar.gz")
-	if err != nil {
-		t.FailNow()
-	}
-
-	checkData(t, result)
-}
-
-func BenchmarkTarGz(b *testing.B) {
-	for b.Loop() {
-		_, err := TarGzProcessor("plugin.tar.gz")
-
-		if err != nil {
-			// Should never error
-			b.FailNow()
-		}
+func benchImpls(b *testing.B, archivePath string, impls []impl) {
+	for _, im := range impls {
+		b.Run(im.name, func(b *testing.B) {
+			for b.Loop() {
+				if _, err := im.fn(archivePath); err != nil {
+					// Should never error
+					b.Fatal(err)
+				}
+			}
+		})
 	}
 }
