@@ -26,12 +26,15 @@ func testArchiveMethod(t *testing.T, method ArchiveProcessor, file string) {
 
 	if err != nil {
 		t.Errorf("error processing: %s", err.Error())
+		t.FailNow()
 	}
 	if !bytes.Equal(yaml, eYaml) {
 		t.Error("manifest incorrect")
+		t.FailNow()
 	}
 	if !bytes.Equal(wasm, eWasm) {
 		t.Error("wasm incorrect")
+		t.FailNow()
 	}
 }
 

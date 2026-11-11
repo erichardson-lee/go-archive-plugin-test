@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"testing/fstest"
 )
 
 func main() {
@@ -52,13 +51,16 @@ func TarProcessor(path string) ([]byte, []byte, error) {
 	defer tarFile.Close()
 
 	tarFs, err := getTarFS(tarFile)
-
-	manifestData, err := fs.ReadFile(tarFs, "plugin.yaml")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	wasmData, err := fs.ReadFile(tarFs, "plugin.wasm")
+	manifestData, err := tarFs.Open("plugin.yaml")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	wasmData, err := tarFs.Open("plugin.wasm")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -70,32 +72,39 @@ func TarGzProcessor(path string) ([]byte, []byte, error) {
 	return nil, nil, errors.New("not implemented")
 }
 
-func getTarFS(tarFile io.Reader) (fs.FS, error) {
+type TarMemFs map[string][]byte
+
+func (fs TarMemFs) Open(path string) ([]byte, error) {
+	data, ok := fs[filepath.Clean(path)]
+
+	if !ok {
+		return nil, fmt.Errorf("file not found: %v: valid paths: %v", path, fs)
+	}
+
+	return data, nil
+}
+
+func getTarFS(tarFile io.Reader) (TarMemFs, error) {
 	tarReader := tar.NewReader(tarFile)
 
-	var tarFs = make(fstest.MapFS)
+	var tarFs = make(TarMemFs)
 	for {
 		header, err := tarReader.Next()
-		if errors.Is(err, io.EOF) {
+		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting next file: %w", err)
 		}
 
 		fileName := filepath.Clean(header.Name)
-		fileData, err := io.ReadAll(tarFile)
+		fileData, err := io.ReadAll(tarReader)
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error reading file %v: %w", fileName, err)
 		}
 
-		tarFs[fileName] = &fstest.MapFile{
-			Data:    fileData,
-			Mode:    header.FileInfo().Mode(),
-			ModTime: header.ModTime,
-			Sys:     header.FileInfo().Sys(),
-		}
+		tarFs[fileName] = fileData
 	}
 
 	return tarFs, nil
