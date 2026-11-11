@@ -1,16 +1,13 @@
 package main
 
 import (
-	"archive/tar"
-	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 )
 
 var _ ArchiveProcessor = TarProcessorV1
+var _ ArchiveProcessor = TarProcessorV2
 
-func TarProcessorV1(path string) (*PluginData, error) {
+func TarProcessorV1(path string, files *PluginFiles) (*PluginData, error) {
 	tarFile, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -22,12 +19,12 @@ func TarProcessorV1(path string) (*PluginData, error) {
 		return nil, err
 	}
 
-	manifestData, err := tarFs.Open("plugin.yaml")
+	manifestData, err := tarFs.Open(files.manifestPath)
 	if err != nil {
 		return nil, err
 	}
 
-	wasmData, err := tarFs.Open("plugin.wasm")
+	wasmData, err := tarFs.Open(files.wasmPath)
 	if err != nil {
 		return nil, err
 	}
@@ -38,40 +35,19 @@ func TarProcessorV1(path string) (*PluginData, error) {
 	}, nil
 }
 
-type TarMemFs map[string][]byte
-
-func (fs TarMemFs) Open(path string) ([]byte, error) {
-	data, ok := fs[filepath.Clean(path)]
-
-	if !ok {
-		return nil, fmt.Errorf("file not found: %v: valid paths: %v", path, fs)
+func TarProcessorV2(path string, files *PluginFiles) (*PluginData, error) {
+	manifestData, err := getFileFromTarFile(path, files.manifestPath)
+	if err != nil {
+		return nil, err
 	}
 
-	return data, nil
-}
-
-func getTarFS(tarFile io.Reader) (TarMemFs, error) {
-	tarReader := tar.NewReader(tarFile)
-
-	var tarFs = make(TarMemFs)
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("error getting next file: %w", err)
-		}
-
-		fileName := filepath.Clean(header.Name)
-		fileData := make([]byte, header.Size)
-
-		if _, err := io.ReadFull(tarReader, fileData); err != nil {
-			return nil, fmt.Errorf("error reading file %v: %w", fileName, err)
-		}
-
-		tarFs[fileName] = fileData
+	wasmData, err := getFileFromTarFile(path, files.wasmPath)
+	if err != nil {
+		return nil, err
 	}
 
-	return tarFs, nil
+	return &PluginData{
+		manifest: manifestData,
+		wasm:     wasmData,
+	}, nil
 }

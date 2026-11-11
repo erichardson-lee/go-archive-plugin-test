@@ -11,4 +11,9 @@ type PluginData struct {
 	wasm     []byte
 }
 
-type ArchiveProcessor func(archivePath string) (data *PluginData, err error)
+type PluginFiles struct {
+	manifestPath string
+	wasmPath     string
+}
+
+type ArchiveProcessor func(archivePath string, files *PluginFiles) (data *PluginData, err error)
