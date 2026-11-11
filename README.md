@@ -10,7 +10,7 @@ Main thing to know is that I wanted to see how different methods compare, and if
 
 These results are based on 50 iterations, all values are per operation; and for
 the sake of sanity, each value is rounded to 4 signifigant figures <br/>
-(Full values available in [RESULTS.md](./RESULTS.md))
+(Full values available in [TEST_PLAN.md](./TEST_PLAN.md#results))
 
 This has all been ran with a `big.file`™ in the archive
 
