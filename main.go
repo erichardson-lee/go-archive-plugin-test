@@ -3,7 +3,7 @@ package main
 import (
 	"archive/tar"
 	"archive/zip"
-	"errors"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"io/fs"
@@ -69,7 +69,33 @@ func TarProcessor(path string) ([]byte, []byte, error) {
 }
 
 func TarGzProcessor(path string) ([]byte, []byte, error) {
-	return nil, nil, errors.New("not implemented")
+	gzFile, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer gzFile.Close()
+
+	tarFile, err := gzip.NewReader(gzFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tarFs, err := getTarFS(tarFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	manifestData, err := tarFs.Open("plugin.yaml")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	wasmData, err := tarFs.Open("plugin.wasm")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return manifestData, wasmData, nil
 }
 
 type TarMemFs map[string][]byte
