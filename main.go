@@ -15,7 +15,12 @@ func main() {
 	fmt.Print("Hello world!")
 }
 
-type ArchiveProcessor func(archivePath string) (manifest []byte, data []byte, err error)
+type PluginData struct {
+	manifest []byte
+	wasm     []byte
+}
+
+type ArchiveProcessor func(archivePath string) (data *PluginData, err error)
 
 var (
 	_ ArchiveProcessor = ZipProcessor
@@ -23,79 +28,88 @@ var (
 	_ ArchiveProcessor = TarGzProcessor
 )
 
-func ZipProcessor(path string) ([]byte, []byte, error) {
+func ZipProcessor(path string) (*PluginData, error) {
 	zipFile, err := zip.OpenReader(path)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer zipFile.Close()
 
 	manifestData, err := fs.ReadFile(zipFile, "plugin.yaml")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	wasmData, err := fs.ReadFile(zipFile, "plugin.wasm")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return manifestData, wasmData, nil
+	return &PluginData{
+		manifest: manifestData,
+		wasm:     wasmData,
+	}, nil
 }
 
-func TarProcessor(path string) ([]byte, []byte, error) {
+func TarProcessor(path string) (*PluginData, error) {
 	tarFile, err := os.Open(path)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer tarFile.Close()
 
 	tarFs, err := getTarFS(tarFile)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	manifestData, err := tarFs.Open("plugin.yaml")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	wasmData, err := tarFs.Open("plugin.wasm")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return manifestData, wasmData, nil
+	return &PluginData{
+		manifest: manifestData,
+		wasm:     wasmData,
+	}, nil
 }
 
-func TarGzProcessor(path string) ([]byte, []byte, error) {
+func TarGzProcessor(path string) (*PluginData, error) {
 	gzFile, err := os.Open(path)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer gzFile.Close()
 
 	tarFile, err := gzip.NewReader(gzFile)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	tarFs, err := getTarFS(tarFile)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	manifestData, err := tarFs.Open("plugin.yaml")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	wasmData, err := tarFs.Open("plugin.wasm")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return manifestData, wasmData, nil
+	return &PluginData{
+		manifest: manifestData,
+		wasm:     wasmData,
+	}, nil
 }
 
 type TarMemFs map[string][]byte

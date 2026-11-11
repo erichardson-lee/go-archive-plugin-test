@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-func getTestData() (manifest []byte, wasm []byte) {
-	yamlData, err := os.ReadFile("./plugin/plugin.yaml")
+func getExpectedData() PluginData {
+	manifestData, err := os.ReadFile("./plugin/plugin.yaml")
 	if err != nil {
 		panic("AAAAAAAAA!!!!")
 	}
@@ -16,23 +16,26 @@ func getTestData() (manifest []byte, wasm []byte) {
 		panic("PANIC!")
 	}
 
-	return yamlData, wasmData
+	return PluginData{
+		manifest: manifestData,
+		wasm:     wasmData,
+	}
 }
 
 func testArchiveMethod(t *testing.T, method ArchiveProcessor, file string) {
-	eYaml, eWasm := getTestData()
+	expected := getExpectedData()
 
-	yaml, wasm, err := method(file)
+	actual, err := method(file)
 
 	if err != nil {
 		t.Errorf("error processing: %s", err.Error())
 		t.FailNow()
 	}
-	if !bytes.Equal(yaml, eYaml) {
+	if !bytes.Equal(expected.manifest, actual.manifest) {
 		t.Error("manifest incorrect")
 		t.FailNow()
 	}
-	if !bytes.Equal(wasm, eWasm) {
+	if !bytes.Equal(expected.wasm, actual.wasm) {
 		t.Error("wasm incorrect")
 		t.FailNow()
 	}
