@@ -22,15 +22,8 @@ func getExpectedData() PluginData {
 	}
 }
 
-func testArchiveMethod(t *testing.T, method ArchiveProcessor, file string) {
+func checkData(t *testing.T, actual *PluginData) {
 	expected := getExpectedData()
-
-	actual, err := method(file)
-
-	if err != nil {
-		t.Errorf("error processing: %s", err.Error())
-		t.FailNow()
-	}
 	if !bytes.Equal(expected.manifest, actual.manifest) {
 		t.Error("manifest incorrect")
 		t.FailNow()
@@ -42,11 +35,61 @@ func testArchiveMethod(t *testing.T, method ArchiveProcessor, file string) {
 }
 
 func TestZip(t *testing.T) {
-	testArchiveMethod(t, ZipProcessor, "plugin.zip")
+	result, err := ZipProcessor("plugin.zip")
+	if err != nil {
+		t.FailNow()
+	}
+
+	checkData(t, result)
 }
+
+func BenchmarkZip(b *testing.B) {
+	for b.Loop() {
+		_, err := ZipProcessor("plugin.zip")
+
+		if err != nil {
+			// Should never error
+			b.FailNow()
+		}
+	}
+}
+
 func TestTar(t *testing.T) {
-	testArchiveMethod(t, TarProcessor, "plugin.tar")
+	result, err := TarProcessor("plugin.tar")
+	if err != nil {
+		t.FailNow()
+	}
+
+	checkData(t, result)
 }
+
+func BenchmarkTar(b *testing.B) {
+	for b.Loop() {
+		_, err := TarProcessor("plugin.tar")
+
+		if err != nil {
+			// Should never error
+			b.FailNow()
+		}
+	}
+}
+
 func TestTarGz(t *testing.T) {
-	testArchiveMethod(t, TarGzProcessor, "plugin.tar.gz")
+	result, err := TarGzProcessor("plugin.tar.gz")
+	if err != nil {
+		t.FailNow()
+	}
+
+	checkData(t, result)
+}
+
+func BenchmarkTarGz(b *testing.B) {
+	for b.Loop() {
+		_, err := TarGzProcessor("plugin.tar.gz")
+
+		if err != nil {
+			// Should never error
+			b.FailNow()
+		}
+	}
 }
